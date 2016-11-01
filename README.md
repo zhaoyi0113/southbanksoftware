@@ -11,7 +11,10 @@ you need to install JDK8 and Maven3. Then run below command to execute the progr
 
 * mvn clean install
 
-After running above command, you can see the result file got generated in target/result.json file.
+After running above command, you can see the result file got generated in target/result.json file as below.
+
+* {"x":5.0,"sumY1":2636871.0,"sumY2":3872169.899999956}
+
 The input files for this program are src/test/resources/t1.json and src/test/resources/t2.json.
 
 The class Main is the entry class for this program. It is specified in 'exec-maven-plugin' and
