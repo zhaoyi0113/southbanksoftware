@@ -53,4 +53,13 @@ public class QueryTest {
         Assert.assertEquals(1.93884, data.get(1.0).getSumT1Y(), ACTUAL);
         Assert.assertEquals(3135.374127111, data.get(2.0).getSumT1Y(), ACTUAL);
     }
+
+    @Test
+    public void test_query_data3() throws IOException{
+        SqlQuery query = new SqlQuery();
+        ResultData resultData = query.queryData(new FileInputStream("src/test/resources/com/southbanksoftware/test3_data1.json"),
+                new FileInputStream("src/test/resources/com/southbanksoftware/test3_data2.json"));
+        Assert.assertEquals(0, resultData.getSumY1(), ACTUAL);
+        Assert.assertEquals(0, resultData.getSumY2(), ACTUAL);
+    }
 }

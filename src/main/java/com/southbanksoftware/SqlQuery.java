@@ -76,18 +76,28 @@ public class SqlQuery {
                 line = reader.readLine();
                 continue;
             }
-            if (dataMap.containsKey(data.getZ())) {
-                //if the z value already exists, sum the y
-                DataT1Join existed = dataMap.get(data.getZ());
-                existed.addNumber(1);
-                existed.addToSumY(data.getY());
-            } else {
-                DataT1Join join = new DataT1Join(data);
-                dataMap.put(data.getZ(), join);
-            }
+            sumYValueOnTheFirstTable(dataMap, data);
             line = reader.readLine();
         }
         return dataMap;
+    }
+
+    /**
+     * parse the first table and sum the y value on the same z value
+     *
+     * @param dataMap the result map
+     * @param data    the current row data of the first table
+     */
+    private void sumYValueOnTheFirstTable(Map<Double, DataT1Join> dataMap, DataT1 data) {
+        if (dataMap.containsKey(data.getZ())) {
+            //if the z value already exists, sum the y
+            DataT1Join existed = dataMap.get(data.getZ());
+            existed.addNumber(1);
+            existed.addToSumY(data.getY());
+        } else {
+            DataT1Join join = new DataT1Join(data);
+            dataMap.put(data.getZ(), join);
+        }
     }
 
     /**
@@ -107,20 +117,31 @@ public class SqlQuery {
 
             if (data1.containsKey(data.getZ())) {
                 //only process the data when it's z value exist on the data1 hash map. the time complexity is O(1)
-                DataT1Join existedD1 = data1.get(data.getZ());
-                existedD1.addJointValue(existedD1.getSumT1Y());
-                if (dataMap.containsKey(data.getZ())) {
-                    DataT2Join existed = dataMap.get(data.getZ());
-                    existed.addToY(existedD1.getNumber() * data.getY());
-                } else {
-                    DataT2Join t2Join = new DataT2Join(data.getY(), data.getY() * existedD1.getNumber());
-                    dataMap.put(data.getZ(), t2Join);
-                }
+                performJoinOnParsingSecondTable(data1, dataMap, data);
             }
 
             line = reader.readLine();
         }
         return dataMap;
+    }
+
+    /**
+     * perform join operation on parsing the second table
+     *
+     * @param data1   the data set from the first table
+     * @param dataMap the joined value on the second table
+     * @param data    the data represent the current row
+     */
+    private void performJoinOnParsingSecondTable(Map<Double, DataT1Join> data1, Map<Double, DataT2Join> dataMap, DataT2 data) {
+        DataT1Join existedD1 = data1.get(data.getZ());
+        existedD1.addJointValue(existedD1.getSumT1Y());
+        if (dataMap.containsKey(data.getZ())) {
+            DataT2Join existed = dataMap.get(data.getZ());
+            existed.addToY(existedD1.getNumber() * data.getY());
+        } else {
+            DataT2Join t2Join = new DataT2Join(data.getY(), data.getY() * existedD1.getNumber());
+            dataMap.put(data.getZ(), t2Join);
+        }
     }
 
     /**
@@ -138,17 +159,4 @@ public class SqlQuery {
         writer.close();
     }
 
-    public static void main(String[] args) {
-        if (args.length < 2) {
-            System.err.println("Please pass two data files");
-            System.exit(1);
-        }
-        SqlQuery query = new SqlQuery();
-        try {
-            String json = query.performSqlQuery(new FileInputStream(args[0]), new FileInputStream(args[1]));
-            query.writeToFile(json);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 }
