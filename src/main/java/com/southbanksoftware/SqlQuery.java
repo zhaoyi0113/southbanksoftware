@@ -46,15 +46,14 @@ public class SqlQuery {
      */
     public ResultData queryData(InputStream t1Stream, InputStream t2Stream) throws IOException {
         Map<Double, DataT1Join> data1 = readFirstData(t1Stream);
-        Map<Double, DataT2Join> data2 = readSecondData(t2Stream, data1);
+        double data2 = readSecondData(t2Stream, data1);
 
         double sumY1 = data1.values().stream().mapToDouble(v -> v.getJointValue()).sum();
         ResultData resultData = new ResultData();
         resultData.setX(data1.entrySet().iterator().next().getValue().getX());
         resultData.setSumY1(sumY1);
 
-        double sumY2 = data2.values().stream().mapToDouble(v -> v.getSumT2Y()).sum();
-        resultData.setSumY2(sumY2);
+        resultData.setSumY2(data2);
         return resultData;
     }
 
@@ -108,40 +107,33 @@ public class SqlQuery {
      * @return the joint value of the second data file
      * @throws IOException
      */
-    private Map<Double, DataT2Join> readSecondData(InputStream stream, Map<Double, DataT1Join> data1) throws IOException {
+    private double readSecondData(InputStream stream, Map<Double, DataT1Join> data1) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-        Map<Double, DataT2Join> dataMap = new LinkedHashMap<>();
         String line = reader.readLine();
+        double sum = 0;
         while (line != null) {
             DataT2 data = parseJson(DataT2.class, line);
-
             if (data1.containsKey(data.getZ())) {
                 //only process the data when it's z value exist on the data1 hash map. the time complexity is O(1)
-                performJoinOnParsingSecondTable(data1, dataMap, data);
+                sum = performJoinOnParsingSecondTable(data1, data, sum);
             }
 
             line = reader.readLine();
         }
-        return dataMap;
+        return sum;
     }
 
     /**
      * perform join operation on parsing the second table
      *
      * @param data1   the data set from the first table
-     * @param dataMap the joined value on the second table
      * @param data    the data represent the current row
      */
-    private void performJoinOnParsingSecondTable(Map<Double, DataT1Join> data1, Map<Double, DataT2Join> dataMap, DataT2 data) {
+    private double performJoinOnParsingSecondTable(Map<Double, DataT1Join> data1,  DataT2 data, double sum) {
         DataT1Join existedD1 = data1.get(data.getZ());
         existedD1.addJointValue(existedD1.getSumT1Y());
-        if (dataMap.containsKey(data.getZ())) {
-            DataT2Join existed = dataMap.get(data.getZ());
-            existed.addToY(existedD1.getNumber() * data.getY());
-        } else {
-            DataT2Join t2Join = new DataT2Join(data.getY(), data.getY() * existedD1.getNumber());
-            dataMap.put(data.getZ(), t2Join);
-        }
+        sum += existedD1.getNumber() * data.getY();
+        return sum;
     }
 
     /**

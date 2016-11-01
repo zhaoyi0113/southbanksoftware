@@ -2,7 +2,11 @@
 
 This is the coding exercise solution for Southbank Software.
 
-The Code is written in Java8 and managed by maven. In order to run this program,
+The Code is written in Java8 and managed by maven to perform below sql query in Java:
+
+* SELECT t1.x,SUM(t1.y),SUM(t2.y) FROM t1 INNER JOIN t2 ON (t1.z=t2.z) WHERE t1.z >0 ORDER BY 3 DESC
+
+In order to run this program,
 you need to install JDK8 and Maven3. Then run below command to execute the program:
 
 * mvn clean install
@@ -38,3 +42,8 @@ After finish reading the first data, the program will start reading the second o
 row to a DataT2 instance, then check if it's z value exist on the hash map generated before. If not, add to
 the join table. So the total time complexity of this program is O(n+m).
 
+On parsing the first file, it will check whether the hash map contains a duplicate value of y for the row
+which has the same value of z. Therefore, it will not load the whole data file into memory. When parsing
+the second file, it only reads the value of each row which has an existed z value on the previous generated
+hash map. Then found one, it will do the join operation to add the value y. So the total memory used will be
+less than the size of the first data file.
