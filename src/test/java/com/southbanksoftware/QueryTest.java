@@ -32,12 +32,12 @@ public class QueryTest {
         List<ResultData> resultData = query.queryData(new FileInputStream("src/test/resources/com/southbanksoftware/test1_data1.json"),
                 new FileInputStream("src/test/resources/com/southbanksoftware/test1_data2.json"));
         Assert.assertEquals(2, resultData.size());
-        Assert.assertEquals(1, resultData.get(1).getX(), ACTUAL);
-        Assert.assertEquals(2, resultData.get(1).getSumY1(), ACTUAL);
-        Assert.assertEquals(2, resultData.get(1).getSumY2(), ACTUAL);
-        Assert.assertEquals(2, resultData.get(0).getX(), ACTUAL);
-        Assert.assertEquals(4, resultData.get(0).getSumY1(), ACTUAL);
+        Assert.assertEquals(1, resultData.get(0).getX(), ACTUAL);
+        Assert.assertEquals(2, resultData.get(0).getSumY1(), ACTUAL);
         Assert.assertEquals(2, resultData.get(0).getSumY2(), ACTUAL);
+        Assert.assertEquals(2, resultData.get(1).getX(), ACTUAL);
+        Assert.assertEquals(4, resultData.get(1).getSumY1(), ACTUAL);
+        Assert.assertEquals(2, resultData.get(1).getSumY2(), ACTUAL);
     }
 
     @Test

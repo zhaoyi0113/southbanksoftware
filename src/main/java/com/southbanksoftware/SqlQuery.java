@@ -52,23 +52,53 @@ public class SqlQuery {
     public List<ResultData> queryData(InputStream t1Stream, InputStream t2Stream) throws IOException {
         Map<Pair, DataT1Join> data1 = readFirstData(t1Stream);
 
-        Map<Pair, DataT1Join> joinResult = readSecondData(t2Stream, data1);
+        Map<Double, List<DataT1Join>> aggregateZ = getAggregateZValue(data1);
 
-        Map<Double, List<DataT1Join>> collect = joinResult.values().stream().collect(Collectors.groupingBy(DataT1Join::getX));
+        Map<Double, List<DataT1Join>> joinResult = readSecondData(t2Stream, aggregateZ);
 
+        Map<Double, DataT1Join> aggregateX = aggregateXValue(joinResult);
         List<ResultData> resultDatas = new ArrayList<>();
 
-        collect.forEach((k, v) -> {
-            double sumY1 = v.stream().mapToDouble(DataT1Join::getJointValue).sum();
-            double sumY2 = v.stream().mapToDouble(DataT1Join::getJointValueT2).sum();
+        aggregateX.forEach((k, v) -> {
             ResultData data = new ResultData();
             data.setX(k);
-            data.setSumY1(sumY1);
-            data.setSumY2(sumY2);
+            data.setSumY1(v.getJointValue());
+            data.setSumY2(v.getJointValueT2());
             resultDatas.add(data);
         });
 
         return resultDatas.stream().sorted(Comparator.comparing(ResultData::getSumY2).reversed()).collect(Collectors.toList());
+    }
+
+    private Map<Double, DataT1Join> aggregateXValue(Map<Double, List<DataT1Join>> joinResult) {
+        Map<Double, DataT1Join> aggregateX = new HashMap<>();
+        joinResult.forEach((k, v) -> {
+            v.forEach(data -> {
+                if (aggregateX.containsKey(data.getX())) {
+                    DataT1Join dataT1Join = aggregateX.get(data.getX());
+                    dataT1Join.addJointValue(data.getJointValue());
+                    dataT1Join.addJointValueT2(data.getJointValueT2());
+                } else {
+                    aggregateX.put(data.getX(), data);
+                }
+            });
+        });
+        return aggregateX;
+    }
+
+    private Map<Double, List<DataT1Join>> getAggregateZValue(Map<Pair, DataT1Join> data1) {
+        Map<Double, List<DataT1Join>> aggregateZ = new HashMap<>();
+        data1.forEach((k, v) -> {
+            if (aggregateZ.containsKey(k.getFirst())) {
+                List<DataT1Join> dataT1Joins = aggregateZ.get(k.getFirst());
+                dataT1Joins.add(v);
+            } else {
+                List<DataT1Join> list = new ArrayList<>();
+                list.add(v);
+                aggregateZ.put((Double) k.getFirst(), list);
+            }
+        });
+        return aggregateZ;
     }
 
     /**
@@ -122,24 +152,21 @@ public class SqlQuery {
      * @return the joint value of the second data file
      * @throws IOException
      */
-    private Map<Pair, DataT1Join> readSecondData(InputStream stream, Map<Pair, DataT1Join> data1) throws IOException {
+    private Map<Double, List<DataT1Join>> readSecondData(InputStream stream, Map<Double, List<DataT1Join>> data1) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
         String line = reader.readLine();
-        Map<Pair, DataT1Join> joinResult = new HashMap<>();
+        Map<Double, List<DataT1Join>> joinResult = new HashMap<>();
         while (line != null) {
             DataT2 data = parseJson(DataT2.class, line);
-            List<DataT1Join> existedList = new ArrayList<>();
-            for (Map.Entry<Pair, DataT1Join> entry : data1.entrySet()) {
-                if (Double.compare((double) entry.getKey().first, data.getZ()) == 0) {
-                    existedList.add(entry.getValue());
-                    joinResult.put(entry.getKey(), entry.getValue());
-                }
-            }
-            existedList.forEach(exist -> {
-                exist.addJointValue(exist.getSumT1Y());
-                exist.addJointValueT2(data.getY());
+            List<DataT1Join> existedList = data1.get(data.getZ());
+            if (existedList != null) {
+                existedList.forEach(exist -> {
+                    exist.addJointValue(exist.getSumT1Y());
+                    exist.addJointValueT2(data.getY());
 
-            });
+                });
+                joinResult.put(data.getZ(), existedList);
+            }
             line = reader.readLine();
         }
         return joinResult;
