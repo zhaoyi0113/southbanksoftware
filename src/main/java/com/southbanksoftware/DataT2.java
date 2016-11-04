@@ -13,13 +13,6 @@ public class DataT2 {
 
     private String zz;
 
-    public long get_id() {
-        return _id;
-    }
-
-    public void set_id(long _id) {
-        this._id = _id;
-    }
 
     public double getY() {
         return y;
@@ -37,11 +30,4 @@ public class DataT2 {
         this.z = z;
     }
 
-    public String getZz() {
-        return zz;
-    }
-
-    public void setZz(String zz) {
-        this.zz = zz;
-    }
 }

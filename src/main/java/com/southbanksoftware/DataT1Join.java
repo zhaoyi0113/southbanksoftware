@@ -22,10 +22,18 @@ public class DataT1Join {
      */
     private double jointValue;
 
+    /**
+     * the joint value of y in the second table
+     */
+    private double jointValueT2;
+
+    private double z;
+
     public DataT1Join(DataT1 data) {
         this.number = 1;
         sumT1Y = data.getY();
         x = data.getX();
+        z = data.getZ();
     }
 
     public int getNumber() {
@@ -64,8 +72,19 @@ public class DataT1Join {
         this.jointValue+=value;
     }
 
+    public void addJointValueT2(double value){
+        this.jointValueT2+= (value * getNumber());
+    }
+    public double getJointValueT2() {
+        return jointValueT2;
+    }
+
     public double getX() {
         return x;
+    }
+
+    public double getZ() {
+        return z;
     }
 
     public void setX(double x) {

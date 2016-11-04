@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 
 import java.io.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 /**
@@ -31,9 +32,13 @@ public class SqlQuery {
      * @throws IOException
      */
     public String performSqlQuery(InputStream t1Stream, InputStream t2Stream) throws IOException {
-        ResultData resultData = queryData(t1Stream, t2Stream);
-        Gson gson = new GsonBuilder().create();
-        return gson.toJson(resultData);
+        List<ResultData> resultData = queryData(t1Stream, t2Stream);
+        StringBuffer buffer = new StringBuffer();
+        resultData.forEach(result -> {
+            Gson gson = new GsonBuilder().create();
+            buffer.append(gson.toJson(result)).append("\n");
+        });
+        return buffer.toString();
     }
 
     /**
@@ -44,17 +49,26 @@ public class SqlQuery {
      * @return the query result data
      * @throws IOException
      */
-    public ResultData queryData(InputStream t1Stream, InputStream t2Stream) throws IOException {
-        Map<Double, DataT1Join> data1 = readFirstData(t1Stream);
-        double data2 = readSecondData(t2Stream, data1);
+    public List<ResultData> queryData(InputStream t1Stream, InputStream t2Stream) throws IOException {
+        Map<Pair, DataT1Join> data1 = readFirstData(t1Stream);
 
-        double sumY1 = data1.values().stream().mapToDouble(v -> v.getJointValue()).sum();
-        ResultData resultData = new ResultData();
-        resultData.setX(data1.entrySet().iterator().next().getValue().getX());
-        resultData.setSumY1(sumY1);
+        Map<Pair, DataT1Join> joinResult = readSecondData(t2Stream, data1);
 
-        resultData.setSumY2(data2);
-        return resultData;
+        Map<Double, List<DataT1Join>> collect = joinResult.values().stream().collect(Collectors.groupingBy(DataT1Join::getX));
+
+        List<ResultData> resultDatas = new ArrayList<>();
+
+        collect.forEach((k, v) -> {
+            double sumY1 = v.stream().mapToDouble(DataT1Join::getJointValue).sum();
+            double sumY2 = v.stream().mapToDouble(DataT1Join::getJointValueT2).sum();
+            ResultData data = new ResultData();
+            data.setX(k);
+            data.setSumY1(sumY1);
+            data.setSumY2(sumY2);
+            resultDatas.add(data);
+        });
+
+        return resultDatas.stream().sorted(Comparator.comparing(ResultData::getSumY2).reversed()).collect(Collectors.toList());
     }
 
     /**
@@ -64,9 +78,9 @@ public class SqlQuery {
      * @return a Hahsmap instance where key is the value of column Z
      * @throws IOException
      */
-    public Map<Double, DataT1Join> readFirstData(InputStream stream) throws IOException {
+    public Map<Pair, DataT1Join> readFirstData(InputStream stream) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-        Map<Double, DataT1Join> dataMap = new LinkedHashMap<>();
+        Map<Pair, DataT1Join> dataMap = new LinkedHashMap<>();
         String line = reader.readLine();
         while (line != null) {
             DataT1 data = parseJson(DataT1.class, line);
@@ -87,15 +101,16 @@ public class SqlQuery {
      * @param dataMap the result map
      * @param data    the current row data of the first table
      */
-    private void sumYValueOnTheFirstTable(Map<Double, DataT1Join> dataMap, DataT1 data) {
-        if (dataMap.containsKey(data.getZ())) {
+    private void sumYValueOnTheFirstTable(Map<Pair, DataT1Join> dataMap, DataT1 data) {
+        Pair pair = new Pair(data.getZ(), data.getX());
+        if (dataMap.containsKey(pair)) {
             //if the z value already exists, sum the y
-            DataT1Join existed = dataMap.get(data.getZ());
+            DataT1Join existed = dataMap.get(pair);
             existed.addNumber(1);
             existed.addToSumY(data.getY());
         } else {
             DataT1Join join = new DataT1Join(data);
-            dataMap.put(data.getZ(), join);
+            dataMap.put(pair, join);
         }
     }
 
@@ -107,33 +122,27 @@ public class SqlQuery {
      * @return the joint value of the second data file
      * @throws IOException
      */
-    private double readSecondData(InputStream stream, Map<Double, DataT1Join> data1) throws IOException {
+    private Map<Pair, DataT1Join> readSecondData(InputStream stream, Map<Pair, DataT1Join> data1) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
         String line = reader.readLine();
-        double sum = 0;
+        Map<Pair, DataT1Join> joinResult = new HashMap<>();
         while (line != null) {
             DataT2 data = parseJson(DataT2.class, line);
-            if (data1.containsKey(data.getZ())) {
-                //only process the data when it's z value exist on the data1 hash map. the time complexity is O(1)
-                sum = performJoinOnParsingSecondTable(data1, data, sum);
+            List<DataT1Join> existedList = new ArrayList<>();
+            for (Map.Entry<Pair, DataT1Join> entry : data1.entrySet()) {
+                if (Double.compare((double) entry.getKey().first, data.getZ()) == 0) {
+                    existedList.add(entry.getValue());
+                    joinResult.put(entry.getKey(), entry.getValue());
+                }
             }
+            existedList.forEach(exist -> {
+                exist.addJointValue(exist.getSumT1Y());
+                exist.addJointValueT2(data.getY());
 
+            });
             line = reader.readLine();
         }
-        return sum;
-    }
-
-    /**
-     * perform join operation on parsing the second table
-     *
-     * @param data1   the data set from the first table
-     * @param data    the data represent the current row
-     */
-    private double performJoinOnParsingSecondTable(Map<Double, DataT1Join> data1,  DataT2 data, double sum) {
-        DataT1Join existedD1 = data1.get(data.getZ());
-        existedD1.addJointValue(existedD1.getSumT1Y());
-        sum += existedD1.getNumber() * data.getY();
-        return sum;
+        return joinResult;
     }
 
     /**

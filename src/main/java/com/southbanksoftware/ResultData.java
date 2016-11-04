@@ -32,6 +32,12 @@ public class ResultData {
     }
 
     public void setSumY2(double sumY2) {
+
         this.sumY2 = sumY2;
+    }
+
+    @Override
+    public String toString() {
+        return "x="+x+", sumY1="+sumY1+", sumY2="+sumY2;
     }
 }
